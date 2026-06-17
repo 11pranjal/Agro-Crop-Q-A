@@ -29,6 +29,17 @@
   font-size: 14px;
 }
 
+.chat-note {
+  margin: 8px auto 0 auto;
+  max-width: 640px;
+  color: #444;
+  font-size: 13px;
+  background: rgba(102, 126, 234, 0.08);
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(102, 126, 234, 0.16);
+}
+
 .upload-section {
   background: rgba(255, 255, 255, 0.9);
   padding: 15px 20px;

@@ -40,10 +40,16 @@ async def health_check():
 
 
 @app.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(
+    file: UploadFile = File(...),
+    session_id: Optional[str] = Form(None)
+):
     # Validate filename
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    if not session_id:
+        session_id = memory.session_memory.create_session()
 
     saved_name, path = pdf_service.save_uploaded_file(await file.read(), file.filename)
 
@@ -54,15 +60,16 @@ async def upload_pdf(file: UploadFile = File(...)):
     if not result.get('success'):
         return JSONResponse(status_code=400, content={"error": result.get('error')})
 
-    # Add chunks to RAG engine
+    # Add chunks to session-specific RAG engine store
     chunks = result.get('chunks', [])
     if chunks:
-        rag.add_documents(chunks)
+        rag.add_documents(chunks, session_id=session_id)
 
     return {
         "success": True,
         "filename": saved_name,
-        "total_chunks": result.get('total_chunks')
+        "total_chunks": result.get('total_chunks'),
+        "session_id": session_id
     }
 
 
@@ -79,8 +86,8 @@ async def chat(query: str = Form(...), session_id: Optional[str] = Form(None)):
     # Get context from hybrid memory
     conversation_context = memory.get_context(session_id)
 
-    # Generate answer via RAG
-    qa = rag.generate_answer(query)
+    # Generate answer via RAG scoped to session
+    qa = rag.generate_answer(query, session_id=session_id)
     answer = qa.get('answer')
 
     # Save conversation

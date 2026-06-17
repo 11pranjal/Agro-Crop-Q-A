@@ -86,6 +86,9 @@ export default function Chat() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      if (sessionId) {
+        formData.append('session_id', sessionId)
+      }
 
       const res = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
@@ -99,6 +102,10 @@ export default function Chat() {
       }
 
       const data = await res.json()
+      const newSessionId = data.session_id
+      if (newSessionId) {
+        setSessionId(newSessionId)
+      }
       setUploadStatus(`✅ Uploaded: ${file.name}`)
       setMessages((prev) => [...prev, {
         role: 'assistant',
@@ -119,6 +126,7 @@ export default function Chat() {
       <div className="chat-header">
         <h1>🌾 AGRO QA Chatbot</h1>
         <p>Ask me anything about agriculture</p>
+        <p className="chat-note">Using OpenAI with uploaded PDF content only. No web search is performed.</p>
       </div>
 
       <div className="upload-section">

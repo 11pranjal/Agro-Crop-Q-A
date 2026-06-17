@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     
     # Retrieval Configuration
     TOP_K_RESULTS: int = 3
-    SIMILARITY_THRESHOLD: float = 0.5
+    SIMILARITY_THRESHOLD: float = 0.08
     
     # Session Configuration
     MAX_HISTORY: int = 20
