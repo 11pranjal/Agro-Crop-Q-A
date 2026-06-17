@@ -18,9 +18,10 @@ def extract_text_from_pdf(file_stream) -> str:
         pdf_reader = PyPDF2.PdfReader(file_stream)
         text = ""
         
-        for page_num in range(len(pdf_reader.pages)):
-            page = pdf_reader.pages[page_num]
-            text += page.extract_text()
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
         
         return text.strip()
     except Exception as e:
@@ -29,25 +30,37 @@ def extract_text_from_pdf(file_stream) -> str:
 
 def chunk_text(text: str, chunk_size: int = 800, overlap: int = 100) -> list[str]:
     """
-    Split text into overlapping chunks
+    Split text into sentence-based chunks
     
     Args:
         text: Text to chunk
-        chunk_size: Size of each chunk
-        overlap: Number of overlapping characters
+        chunk_size: Approximate size of each chunk
+        overlap: Number of characters to overlap between chunks
         
     Returns:
         List of text chunks
     """
+    import re
+
+    sentences = re.split(r'(?<=[.!?])\s+', text)
     chunks = []
-    start = 0
+    current = ""
+
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if len(current) + len(sentence) + 1 <= chunk_size:
+            current = (current + " " + sentence).strip() if current else sentence
+        else:
+            if current:
+                chunks.append(current)
+            current = sentence
     
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start = end - overlap
-    
-    return [chunk.strip() for chunk in chunks if chunk.strip()]
+    if current:
+        chunks.append(current)
+
+    return chunks
 
 
 def clean_text(text: str) -> str:
@@ -62,9 +75,15 @@ def clean_text(text: str) -> str:
     """
     import re
     
-    # Remove extra whitespace
+    # Remove common PDF noise strings
+    text = re.sub(r'(?i)back to contents', ' ', text)
+    text = re.sub(r'(?i)photo[^.\n]*', ' ', text)
+    text = re.sub(r'(?i)(figure|image|source|copyright)[^.\n]*', ' ', text)
+    text = re.sub(r'(?i)bugwood\.org', ' ', text)
+    text = re.sub(r'(?i)all [A-Z][a-z]+ [A-Z][a-z]+ [^\n]*', ' ', text)
+
+    # Normalize whitespace and remove stray special characters
     text = re.sub(r'\s+', ' ', text)
-    # Remove special characters but keep basic punctuation
     text = re.sub(r'[^\w\s.!?,()-]', '', text)
     
     return text.strip()

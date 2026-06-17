@@ -13,6 +13,9 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -67,11 +70,76 @@ export default function Chat() {
     }
   }
 
+  async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const file = files[0]
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadStatus('❌ Please upload a PDF file')
+      return
+    }
+
+    setUploading(true)
+    setUploadStatus('⏳ Uploading...')
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        const errorMsg = errorData?.detail || errorData?.error || 'Upload failed'
+        throw new Error(errorMsg)
+      }
+
+      const data = await res.json()
+      setUploadStatus(`✅ Uploaded: ${file.name}`)
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: `📄 Document "${file.name}" uploaded successfully! You can now ask me questions about it.`
+      }])
+    } catch (error) {
+      console.error('Upload error:', error)
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setUploadStatus(`❌ Upload failed: ${errorMsg}`)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <div className="chat-container">
       <div className="chat-header">
         <h1>🌾 AGRO QA Chatbot</h1>
         <p>Ask me anything about agriculture</p>
+      </div>
+
+      <div className="upload-section">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf"
+          onChange={handleFileUpload}
+          disabled={uploading}
+          style={{ display: 'none' }}
+        />
+        <button
+          className="upload-btn"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? '⏳ Uploading...' : '📄 Upload PDF'}
+        </button>
+        {uploadStatus && (
+          <p className="upload-status">{uploadStatus}</p>
+        )}
       </div>
 
       <div className="chat-messages">

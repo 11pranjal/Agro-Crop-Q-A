@@ -15,12 +15,12 @@ class PDFService:
         self.chunk_size = settings.CHUNK_SIZE
         self.chunk_overlap = settings.CHUNK_OVERLAP
     
-    def save_uploaded_file(self, file_stream, original_filename: str) -> tuple[str, str]:
+    def save_uploaded_file(self, file_bytes, original_filename: str) -> tuple[str, str]:
         """
         Save uploaded PDF file
         
         Args:
-            file_stream: File stream
+            file_bytes: File bytes/stream
             original_filename: Original filename
             
         Returns:
@@ -31,7 +31,11 @@ class PDFService:
         
         # Save file
         with open(file_path, 'wb') as f:
-            f.write(file_stream.read())
+            # Handle both bytes and file-like objects
+            if isinstance(file_bytes, bytes):
+                f.write(file_bytes)
+            else:
+                f.write(file_bytes.read())
         
         return safe_filename, str(file_path)
     

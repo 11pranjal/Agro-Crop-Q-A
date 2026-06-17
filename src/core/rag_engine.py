@@ -38,8 +38,17 @@ class RAGEngine:
         
         # Filter by similarity threshold
         filtered_results = [r for r in results if r['score'] >= self.similarity_threshold]
-        
-        return filtered_results if filtered_results else results[:self.top_k]
+        selected_results = filtered_results if filtered_results else results[:self.top_k]
+
+        # Remove duplicate document texts
+        unique = []
+        seen = set()
+        for result in selected_results:
+            doc_text = result['document'].strip()
+            if doc_text not in seen:
+                seen.add(doc_text)
+                unique.append(result)
+        return unique
     
     def generate_response(self, query: str, context: str) -> str:
         """
@@ -91,24 +100,42 @@ Answer:"""
     
     def _generate_with_local(self, query: str, context: str) -> str:
         """Generate response using local summarization"""
-        # Simple local response generation
         from sklearn.feature_extraction.text import TfidfVectorizer
-        import numpy as np
+        from sklearn.metrics.pairwise import cosine_similarity
+        import re
         
         if not context.strip():
             return "I couldn't find relevant information to answer your question. Please upload a PDF with agricultural information."
         
-        # Extract key sentences from context
-        sentences = context.split('. ')
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', context) if s.strip()]
+        if not sentences:
+            return "I couldn't find relevant information to answer your question. Please upload a PDF with agricultural information."
+        
+        try:
+            vectorizer = TfidfVectorizer(stop_words='english')
+            sentence_vectors = vectorizer.fit_transform(sentences)
+            query_vector = vectorizer.transform([query])
+            scores = cosine_similarity(query_vector, sentence_vectors)[0]
+            top_indices = scores.argsort()[::-1]
+            top_sentences = []
+            seen_sentences = set()
+            for idx in top_indices:
+                if scores[idx] <= 0:
+                    break
+                sentence = sentences[idx]
+                if sentence not in seen_sentences:
+                    seen_sentences.add(sentence)
+                    top_sentences.append(sentence)
+                if len(top_sentences) >= 3:
+                    break
+            if top_sentences:
+                return ' '.join(top_sentences)
+        except Exception:
+            pass
         
         if len(sentences) > 3:
-            # Return top 3 most relevant sentences
-            response = '. '.join(sentences[:3]) + '.'
-        else:
-            response = context
-        
-        return response
-    
+            return '. '.join(sentences[:3]) + '.'
+        return context    
     def generate_answer(self, query: str) -> dict:
         """
         Complete QA pipeline: retrieve + generate

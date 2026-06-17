@@ -66,7 +66,10 @@ class VectorStore:
         Args:
             documents: List of document strings
         """
-        self.documents.extend(documents)
+        # Avoid saving duplicate document chunks
+        for document in documents:
+            if document not in self.documents:
+                self.documents.append(document)
         
         # Re-fit vectorizer with all documents
         self.vectors = self.vectorizer.fit_transform(self.documents).toarray()
