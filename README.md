@@ -1,54 +1,66 @@
 # Agro QA Chatbot
+# AGRO QA Chatbot
 
-Simple Flask app that lets farmers upload PDFs and ask natural language questions.
+RAG-based Q&A system for farmers. Upload PDFs and ask natural-language questions.
 
-This app supports two modes:
-- **Free local mode**: uses TF-IDF retrieval and simple local summarization, no API key required.
-- **OpenAI mode**: if you set `OPENAI_API_KEY`, the app uses OpenAI to generate a higher-quality answer.
+This repository was restructured to use a modern stack:
 
-Setup
+- FastAPI backend (`src/api/app.py`)
+- Modular services in `src/services` and `src/core`
+- React + Vite frontend skeleton in `frontend/`
+- SQLite persistent conversation history (`database/`)
+- Docker and docker-compose for local development
 
-1. Create and activate a Python virtualenv.
+## Features
 
-2. Install dependencies:
+- PDF upload and chunking
+- TF-IDF retrieval-based context (vector store)
+- RAG-style pipeline with optional OpenAI support
+- FastAPI backend and React frontend
+- SQLite persistent conversation history
+- Docker + docker-compose for local dev
+
+## Quickstart
+
+1. Create a Python venv and activate it
+
+```bash
+python -m venv venv
+# Windows PowerShell
+venv\Scripts\Activate.ps1
+# or bash
+source venv/bin/activate
+```
+
+2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file in the project root if you want OpenAI features:
-
-```dotenv
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-HOST=127.0.0.1
-PORT=7860
-FLASK_DEBUG=1
-```
-
-Leave `OPENAI_API_KEY` blank to use the free local mode. If you want a higher-quality answer later, install the OpenAI package and add a valid key.
-
-Run
+3. Run backend
 
 ```bash
-python app.py
+uvicorn src.api.app:app --reload --port 8000
 ```
 
-Open in browser:
+4. Run frontend (from `frontend` folder)
 
 ```bash
-http://127.0.0.1:7860
+npm install
+npm run dev
 ```
 
-How it works
+5. Open frontend at `http://localhost:5173` and backend at `http://localhost:8000`
 
-- Upload a PDF on the homepage.
-- Ask a question.
-- If no API key is provided, the app will use local TF-IDF retrieval and summarization.
-- If `OPENAI_API_KEY` is set, the app will use OpenAI to generate the final answer.
+## Project Layout
 
-Note
+See the `src/`, `frontend/`, `database/`, and `docker/` folders for implementation.
 
-OpenAI is optional. You can run the application without paying for OpenAI by leaving `OPENAI_API_KEY` empty.
+## Notes
+
+- The project currently uses TF-IDF for local embeddings and retrieval as a lightweight RAG approach.
+- If you want higher-quality LLM responses, set `OPENAI_API_KEY` in a `.env` file and configure `OPENAI_MODEL` in `src/core/config.py`.
+
+
 # Agro-Crop-Q-A

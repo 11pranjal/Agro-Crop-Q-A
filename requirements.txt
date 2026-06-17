@@ -3,3 +3,12 @@ PyPDF2
 scikit-learn
 numpy
 python-dotenv
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic-settings
+aiofiles
+jinja2
+pytest
+httpx2
+python-multipart

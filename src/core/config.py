@@ -1,11 +1,14 @@
 """Configuration management for AGRO QA Chatbot"""
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from pathlib import Path
 import os
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
+    # Configuration for Pydantic v2: ignore extra env vars and set env file
+    model_config = ConfigDict(env_file=".env", extra="ignore", case_sensitive=True)
     
     # API Configuration
     API_HOST: str = "127.0.0.1"
@@ -42,9 +45,7 @@ class Settings(BaseSettings):
     MAX_HISTORY: int = 20
     SESSION_TIMEOUT: int = 3600  # 1 hour in seconds
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    # No inner Config: using model_config (ConfigDict) instead for pydantic v2
 
 
 settings = Settings()
