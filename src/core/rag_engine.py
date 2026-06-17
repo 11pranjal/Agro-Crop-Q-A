@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 from src.services.retrieval_service import VectorStore
 from src.services.embedding_service import EmbeddingService
+from src.services.llm_service import LLMService
 from src.core.config import settings
 
 
@@ -13,6 +14,7 @@ class RAGEngine:
         self.base_store_path = Path(settings.VECTOR_STORE_PATH)
         self.base_store_path.mkdir(parents=True, exist_ok=True)
         self.embedding_service = EmbeddingService()
+        self.llm_service = LLMService()
         self.top_k = settings.TOP_K_RESULTS
         self.similarity_threshold = settings.SIMILARITY_THRESHOLD
         self.session_stores: dict[str, VectorStore] = {}
@@ -23,7 +25,7 @@ class RAGEngine:
 
         if session_id not in self.session_stores:
             store_path = self.base_store_path / session_id
-            self.session_stores[session_id] = VectorStore(str(store_path))
+            self.session_stores[session_id] = VectorStore(str(store_path), self.embedding_service)
 
         return self.session_stores[session_id]
     
@@ -66,30 +68,52 @@ class RAGEngine:
                 unique.append(result)
         return unique
     
-    def generate_response(self, query: str, context: str) -> str:
+    def generate_response(self, query: str, context: str) -> tuple[str, bool]:
         """
-        Generate response using OpenAI or local LLM
-        
-        Args:
-            query: User query
-            context: Retrieved context
-            
-        Returns:
-            Generated response
+        Generate response using PDF context and hybrid LLM fallback.
+
+        Returns a tuple of (answer, fallback_used).
         """
-        if settings.OPENAI_API_KEY:
-            if context.strip():
-                return self._generate_with_openai(query, context)
-            return self._generate_general_openai_response(query)
-        else:
-            return self._generate_with_local(query, context)
+        if context.strip():
+            pdf_answer = self._generate_from_pdf_context(query, context)
+            if pdf_answer and not pdf_answer.startswith("I couldn't find relevant information"):
+                return pdf_answer, False
+
+        general_answer = self._generate_general_answer(query)
+        if general_answer:
+            return general_answer, True
+
+        if context.strip():
+            return self._generate_with_local(query, context), False
+
+        return "I couldn't find relevant information to answer your question. Please upload a PDF with agricultural information or ask a general question.", False
+
+    def _generate_from_pdf_context(self, query: str, context: str) -> str:
+        """Generate an answer from PDF context using available LLMs or local fallback."""
+        if not context.strip():
+            return ""
+
+        if self.llm_service.can_generate():
+            llm_answer = self.llm_service.generate_with_context(query, context)
+            if llm_answer:
+                return llm_answer
+
+        return self._generate_with_local(query, context)
+
+    def _generate_general_answer(self, query: str) -> str:
+        """Generate a general answer from a local or remote LLM."""
+        if self.llm_service.can_generate():
+            llm_answer = self.llm_service.generate_general(query)
+            if llm_answer:
+                return llm_answer
+        return ""
 
     def _generate_general_openai_response(self, query: str) -> str:
         """Generate a general OpenAI response for non-PDF queries"""
         try:
             import openai
 
-            openai.api_key = settings.OPENAI_API_KEY
+            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
             system_prompt = (
                 "You are a helpful agriculture assistant. "
                 "If the user asks about agriculture, answer clearly and simply. "
@@ -103,7 +127,7 @@ class RAGEngine:
                 "Answer naturally and helpfully."
             )
 
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model=settings.OPENAI_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -119,53 +143,21 @@ class RAGEngine:
 
             return response['choices'][0]['message']['content'].strip()
         except Exception as e:
+            if settings.USE_LOCAL_MODEL:
+                return "I couldn't use OpenAI because of an API error. If you've uploaded a PDF, I can still try local document Q&A when OpenAI is disabled."
             return f"Error generating response: {str(e)}"
 
     def _generate_with_openai(self, query: str, context: str) -> str:
         """Generate response using OpenAI API"""
         if not context.strip():
-            return "I couldn't find relevant information to answer your question. Please upload a PDF with agricultural information or ask a question covered by the uploaded document."
+            return None
 
-        try:
-            import openai
+        if self.llm_service.can_generate():
+            llm_answer = self.llm_service.generate_with_context(query, context)
+            if llm_answer:
+                return llm_answer
 
-            openai.api_key = settings.OPENAI_API_KEY
-
-            system_prompt = (
-                "You are an agricultural expert helping farmers. "
-                "Answer using only the context provided from the uploaded PDF. "
-                "Do not invent facts, do not reference outside knowledge, and do not search the web. "
-                "Do not repeat the context verbatim. Instead, summarize the answer naturally in your own words. "
-                "If the answer is not contained in the PDF context, reply exactly: "
-                "I couldn't find relevant information to answer your question."
-            )
-
-            user_prompt = (
-                f"Context:\n{context}\n\n"
-                f"Question: {query}\n\n"
-                "Answer concisely, directly, and in a way a farmer can understand. "
-                "Do not quote the context verbatim; instead, respond in a general, natural way. "
-                "If the context does not contain the answer, say exactly: "
-                "I couldn't find relevant information to answer your question."
-            )
-
-            response = openai.ChatCompletion.create(
-                model=settings.OPENAI_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.0,
-                max_tokens=250,
-                n=1,
-                top_p=1.0,
-                frequency_penalty=0.0,
-                presence_penalty=0.0,
-            )
-
-            return response['choices'][0]['message']['content'].strip()
-        except Exception as e:
-            return f"Error generating response: {str(e)}"
+        return self._generate_with_local(query, context)
     
     def _generate_with_local(self, query: str, context: str) -> str:
         """Generate response using local summarization"""
@@ -255,7 +247,7 @@ class RAGEngine:
         summary_patterns = [
             r"\b(summarize|summary|summarise)\b",
             r"\b(whole pdf|whole document|entire pdf|entire document|document overview|overview of the document|full document)\b",
-            r"\b(what is this document about|what is this pdf about|what does this document (talk|talks) about|what does this pdf (talk|talks) about|tell me about this document|tell me about this pdf|what does this document say|what does this pdf say)\b",
+            r"\b(what is this document about|what is this pdf about|what is the pdf about|what does this document (talk|talks) about|what does this pdf (talk|talks) about|tell me about this document|tell me about this pdf|what does this document say|what does this pdf say)\b",
         ]
 
         return any(re.search(pattern, q) for pattern in summary_patterns)
@@ -277,7 +269,7 @@ class RAGEngine:
         try:
             import openai
 
-            openai.api_key = settings.OPENAI_API_KEY
+            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
             system_prompt = (
                 "You are a concise agricultural assistant. "
                 "Read the following PDF content and summarize the main topics and findings in a few clear bullet points. "
@@ -288,7 +280,7 @@ class RAGEngine:
                 "Please summarize the document as 3-5 bullet points."
             )
 
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model=settings.OPENAI_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -303,6 +295,8 @@ class RAGEngine:
             )
             return response['choices'][0]['message']['content'].strip()
         except Exception as e:
+            if settings.USE_LOCAL_MODEL:
+                return self._generate_local_summary(context)
             return f"Error generating summary: {str(e)}"
 
     def _generate_local_summary(self, context: str) -> str:
@@ -366,11 +360,12 @@ class RAGEngine:
         context = " ".join([r['document'] for r in retrieved])
         
         # Generate response
-        answer = self.generate_response(query, context)
-        
+        answer, fallback_used = self.generate_response(query, context)
+
         return {
             "answer": answer,
             "context_used": len(retrieved),
             "sources": retrieved,
-            "query": query
+            "query": query,
+            "fallback_used": fallback_used
         }

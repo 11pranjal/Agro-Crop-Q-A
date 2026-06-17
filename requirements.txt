@@ -13,3 +13,5 @@ pytest
 httpx2
 python-multipart
 openai
+sentence-transformers
+faiss-cpu

@@ -59,7 +59,8 @@ See the `src/`, `frontend/`, `database/`, and `docker/` folders for implementati
 
 ## Notes
 
-- The project currently uses TF-IDF for local embeddings and retrieval as a lightweight RAG approach.
+- The project currently uses TF-IDF and a local summarization fallback for free PDF Q&A.
+- A stronger local retrieval pipeline is now supported using SentenceTransformer embeddings and FAISS.
 - If you want higher-quality LLM responses, set `OPENAI_API_KEY` in a `.env` file and configure `OPENAI_MODEL` in `src/core/config.py`.
 
 

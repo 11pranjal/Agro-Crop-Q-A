@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    LOCAL_EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    LOCAL_LLM_MODEL: str = "llama-3b"
+    OLLAMA_URL: str = "http://localhost:11434"
     
     # Local Model Configuration
     USE_LOCAL_MODEL: bool = True
