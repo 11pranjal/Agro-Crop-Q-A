@@ -21,16 +21,52 @@ def index():
 
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
+    import sys
+    print("DEBUG: Upload endpoint called", flush=True)
+    sys.stdout.flush()
+    
     if "file" not in request.files:
         return render_template("index.html", error="Missing file.")
+    
     f = request.files["file"]
     if f.filename == "":
         return render_template("index.html", error="Empty filename.")
 
-    text = extract_text_from_pdf(f.stream)
-    chunks = chunk_text(text, chunk_size=800, overlap=100)
-    VS.add_documents(chunks, source=f.filename)
-    return render_template("index.html", message=f"Uploaded {f.filename} with {len(chunks)} chunks.")
+    try:
+        print(f"DEBUG: Starting PDF extraction for {f.filename}", flush=True)
+        sys.stdout.flush()
+        
+        text = extract_text_from_pdf(f.stream)
+        print(f"DEBUG: Extraction complete, got {len(text)} characters", flush=True)
+        sys.stdout.flush()
+        
+        if not text.strip():
+            return render_template("index.html", error="PDF is empty or contains no extractable text.")
+        
+        print("DEBUG: Starting text chunking", flush=True)
+        sys.stdout.flush()
+        
+        chunks = chunk_text(text, chunk_size=800, overlap=100)
+        print(f"DEBUG: Chunking complete, got {len(chunks)} chunks", flush=True)
+        sys.stdout.flush()
+        
+        if not chunks:
+            return render_template("index.html", error="Failed to create text chunks from PDF.")
+        
+        print(f"DEBUG: Adding {len(chunks)} documents to vector store", flush=True)
+        sys.stdout.flush()
+        
+        VS.add_documents(chunks, source=f.filename)
+        print("DEBUG: Documents added successfully", flush=True)
+        sys.stdout.flush()
+        
+        return render_template("index.html", message=f"Uploaded {f.filename} with {len(chunks)} chunks.")
+    except Exception as e:
+        print(f"DEBUG: Error during upload: {e}", flush=True)
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+        sys.stdout.flush()
+        return render_template("index.html", error=f"Upload failed: {str(e)}")
 
 
 def summarize_snippets(snippets, question):
@@ -107,5 +143,5 @@ def chat():
 if __name__ == "__main__":
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", 7860))
-    debug = os.environ.get("FLASK_DEBUG", "1") == "1"
-    app.run(host=host, port=port, debug=debug)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host=host, port=port, debug=debug, use_reloader=False)
