@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # API Configuration
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "http://localhost:5176"
     DEBUG: bool = True
     
     # OpenAI Configuration (optional)
