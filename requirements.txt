@@ -15,3 +15,7 @@ python-multipart
 openai
 sentence-transformers
 faiss-cpu
+pytesseract
+pdf2image
+PyMuPDF
+Pillow

@@ -61,7 +61,29 @@ See the `src/`, `frontend/`, `database/`, and `docker/` folders for implementati
 
 - The project currently uses TF-IDF and a local summarization fallback for free PDF Q&A.
 - A stronger local retrieval pipeline is now supported using SentenceTransformer embeddings and FAISS.
+- The PDF extractor now also tries OCR on embedded images when Tesseract and an image backend are available.
 - If you want higher-quality LLM responses, set `OPENAI_API_KEY` in a `.env` file and configure `OPENAI_MODEL` in `src/core/config.py`.
 
+## OCR Setup
+
+To enable image OCR inside PDFs, install the following dependencies and a Tesseract runtime:
+
+```bash
+pip install -r requirements.txt
+```
+
+On Windows, install Tesseract OCR:
+
+1. Download the installer from https://github.com/tesseract-ocr/tesseract.
+2. Install it and add the Tesseract installation directory to your PATH.
+
+If Tesseract is not on PATH, configure it in Python by setting:
+
+```python
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+```
+
+The app will use OCR only when the required libraries are installed and the Tesseract binary is available.
 
 # Agro-Crop-Q-A

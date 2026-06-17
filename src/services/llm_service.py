@@ -40,19 +40,15 @@ class LLMService:
             client = openai.OpenAI(api_key=self.openai_key)
             system_prompt = (
                 "You are an agricultural expert helping farmers. "
-                "Answer using only the context provided from the uploaded PDF. "
-                "Do not invent facts, do not reference outside knowledge, and do not search the web. "
-                "Do not repeat the context verbatim. Instead, summarize the answer naturally in your own words. "
-                "If the answer is not contained in the PDF context, reply exactly: "
-                "I couldn't find relevant information to answer your question."
+                "Use ONLY the context provided from the uploaded PDF to answer. "
+                "Do not invent facts or reference outside knowledge. "
+                "If the answer is not in the context, reply exactly: 'I couldn't find relevant information to answer your question.'"
             )
             user_prompt = (
                 f"Context:\n{context}\n\n"
                 f"Question: {query}\n\n"
-                "Answer concisely, directly, and in a way a farmer can understand. "
-                "Do not quote the context verbatim; instead, respond in a general, natural way. "
-                "If the context does not contain the answer, say exactly: "
-                "I couldn't find relevant information to answer your question."
+                "Answer concisely and return the response in Q&A format exactly like this:\n"
+                "Question: <repeat the question>\nAnswer: <one to three sentence concise answer>\n"
             )
             response = client.chat.completions.create(
                 model=self.openai_model,
@@ -108,14 +104,11 @@ class LLMService:
 
     def _generate_with_ollama_with_context(self, query: str, context: str) -> Optional[str]:
         prompt = (
-            "You are an agricultural expert helping farmers. "
-            "Answer using only the context provided from the uploaded PDF. "
-            "Do not invent facts, do not reference outside knowledge, and do not search the web. "
-            "Do not repeat the context verbatim. Instead, summarize the answer naturally in your own words. "
-            "If the answer is not contained in the PDF context, reply: "
-            "I couldn't find relevant information to answer your question.\n\n"
+            "You are an agricultural expert helping farmers. Use ONLY the provided context to answer. "
+            "Do not invent facts or reference outside knowledge. If the answer is not in the context, reply exactly: 'I couldn't find relevant information to answer your question.'\n\n"
             f"Context:\n{context}\n\nQuestion: {query}\n\n"
-            "Answer concisely, directly, and in a way a farmer can understand."
+            "Answer concisely and return the response in Q&A format exactly like this:\n"
+            "Question: <repeat the question>\nAnswer: <one to three sentence concise answer>\n"
         )
         return self._ollama_generate(prompt, temperature=0.0, max_tokens=250)
 

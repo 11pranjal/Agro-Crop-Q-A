@@ -76,17 +76,44 @@ class RAGEngine:
         """
         if context.strip():
             pdf_answer = self._generate_from_pdf_context(query, context)
-            if pdf_answer and not pdf_answer.startswith("I couldn't find relevant information"):
-                return pdf_answer, False
+            if pdf_answer and not pdf_answer.lower().startswith("i couldn't find relevant information"):
+                return self._ensure_qa_format(pdf_answer, query), False
 
         general_answer = self._generate_general_answer(query)
         if general_answer:
-            return general_answer, True
+            return self._ensure_qa_format(general_answer, query), True
 
         if context.strip():
-            return self._generate_with_local(query, context), False
+            local = self._generate_with_local(query, context)
+            return self._ensure_qa_format(local, query), False
 
         return "I couldn't find relevant information to answer your question. Please upload a PDF with agricultural information or ask a general question.", False
+
+    def _ensure_qa_format(self, answer: str, query: str) -> str:
+        """Ensure the answer is in strict Q&A format: 'Question: ...\nAnswer: ...'"""
+        import re
+
+        if not answer or not answer.strip():
+            return "I couldn't find relevant information to answer your question."
+
+        a = answer.strip()
+
+        # If the LLM explicitly says it couldn't find info, return that exact message
+        if a.lower().startswith("i couldn't find relevant information"):
+            return "I couldn't find relevant information to answer your question."
+
+        # If already contains Q/A markers, normalize spacing and return
+        if re.search(r"question\s*:\s*", a, re.IGNORECASE) and re.search(r"answer\s*:\s*", a, re.IGNORECASE):
+            # compress multiple blank lines
+            return re.sub(r"\n{3,}", "\n\n", a)
+
+        # Otherwise, produce a concise 1-3 sentence answer and wrap in Q/A format
+        sentences = re.split(r'(?<=[.!?])\s+', a)
+        concise = ' '.join([s.strip() for s in sentences if s.strip()][:2])
+        if not concise:
+            concise = a
+
+        return f"Question: {query}\nAnswer: {concise.strip()}"
 
     def _generate_from_pdf_context(self, query: str, context: str) -> str:
         """Generate an answer from PDF context using available LLMs or local fallback."""
