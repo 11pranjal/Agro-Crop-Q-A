@@ -125,30 +125,17 @@ export default function Chat() {
     <div className="chat-container">
       <div className="chat-header">
         <h1>🌾 AGRO QA Chatbot</h1>
-        <p>Ask me anything about agriculture</p>
-        <p className="chat-note">Using OpenAI with uploaded PDF content only. No web search is performed.</p>
+        <p>Ask me anything about agriculture by uploading a related PDF.</p>
       </div>
 
-      <div className="upload-section">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={handleFileUpload}
-          disabled={uploading}
-          style={{ display: 'none' }}
-        />
-        <button
-          className="upload-btn"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-        >
-          {uploading ? '⏳ Uploading...' : '📄 Upload PDF'}
-        </button>
-        {uploadStatus && (
-          <p className="upload-status">{uploadStatus}</p>
-        )}
-      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleFileUpload}
+        disabled={uploading}
+        style={{ display: 'none' }}
+      />
 
       <div className="chat-messages">
         {messages.length === 0 ? (
@@ -181,17 +168,26 @@ export default function Chat() {
       </div>
 
       <div className="chat-input-area">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type your question here... (Press Enter to send)"
-          disabled={loading}
-          rows={3}
-        />
-        <button onClick={handleSend} disabled={loading || !input.trim()}>
-          {loading ? '⏳ Sending...' : '📤 Send'}
+        <button
+          className="upload-btn"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? '⏳ Uploading...' : '📄 Upload PDF'}
         </button>
+        <div className="chat-input-controls">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your question here... (Press Enter to send)"
+            disabled={loading}
+            rows={3}
+          />
+          <button className="send-btn" onClick={handleSend} disabled={loading || !input.trim()}>
+            {loading ? '⏳ Sending...' : '📤 Send'}
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -7,6 +7,45 @@ from src.services.llm_service import LLMService
 from src.core.config import settings
 
 
+SMALL_TALK_RESPONSES = {
+    "thank you": "You're welcome! Feel free to ask another question.",
+    "thanks": "You're welcome! 😊",
+    "thankyou": "You're welcome! 😊",
+    "thank u": "You're welcome! 😊",
+    "thx": "You're welcome! 😊",
+    "hi": "Hello! How can I help you today?",
+    "hello": "Hello! How can I help you today?",
+    "hey": "Hey there! What agricultural question can I help with?",
+    "bye": "Goodbye! Have a great day!",
+    "goodbye": "Goodbye! Have a great day!",
+    "see you": "Goodbye! Have a great day!",
+    "see ya": "Goodbye! Have a great day!",
+    "good morning": "Good morning! How can I assist with your agriculture questions?",
+    "good afternoon": "Good afternoon! What farming question can I answer?",
+    "good evening": "Good evening! Ask me anything about agriculture.",
+    "good night": "Good night! Feel free to ask more after uploading a PDF.",
+    "what can you do": "I can answer agricultural questions using your uploaded PDF.",
+    "who are you": "I'm an agriculture assistant bot. Upload a PDF and ask me questions from the document.",
+    "are you a bot": "Yes, I'm an agriculture assistant bot. Upload a PDF and ask me questions from the document.",
+    "what are you": "I'm an agriculture assistant bot. Upload a PDF and ask me questions from the document.",
+    "ok": "Great! Upload a PDF and ask your agriculture questions when ready.",
+    "okay": "Great! Upload a PDF and ask your agriculture questions when ready.",
+    "sure": "Sure! Upload a PDF and ask your agriculture question.",
+    "ya sure": "Sure! Upload a PDF and ask your agriculture question.",
+    "yeah sure": "Sure! Upload a PDF and ask your agriculture question.",
+    "sounds good": "Sounds good! Upload a PDF whenever you're ready.",
+    "no problem": "No problem! Ask another agricultural question when you're ready.",
+    "thanks a lot": "You're welcome! 😊",
+    "thank you very much": "You're very welcome! 😊",
+    "appreciate it": "You're welcome! Happy to help.",
+    "no worries": "No worries! Ask your next agriculture question whenever you're ready.",
+    "good to see you": "Good to see you too! Upload a PDF and ask away.",
+    "nice to meet you": "Nice to meet you too! Upload a PDF and ask your agriculture question.",
+    "sorry": "No problem! Upload a PDF whenever you're ready and ask your question.",
+    "not now": "That's fine. Upload a PDF when you're ready and I can help with agriculture questions.",
+}
+
+
 class RAGEngine:
     """Main RAG engine for question answering"""
     
@@ -212,36 +251,28 @@ class RAGEngine:
         if not q:
             return False
 
-        small_talk_patterns = [
-            r"\b(hi|hello|hey|greetings)\b",
-            r"\b(how are you|how are you doing|how is it going|how is your day|how was your day|what's up|whats up)\b",
-            r"\b(thanks|thank you)\b",
-            r"\b(bye|goodbye|see you)\b",
-            r"\b(nice to meet you|pleased to meet you|what can you do|who are you|what are you|are you a bot|are you a machine)\b",
-            r"\b(ok|okay|oke)\b.*\b(begin|start)\b",
-            r"\b(let's begin|lets begin|let's start|lets start)\b",
-        ]
+        normalized = re.sub(r"[^\w\s]", " ", q)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
 
-        if len(q.split()) <= 14 and any(re.search(pattern, q) for pattern in small_talk_patterns):
-            return True
-        return False
+        if not normalized:
+            return False
+
+        if len(normalized.split()) > 14:
+            return False
+
+        return any(re.search(r"\b" + re.escape(phrase) + r"\b", normalized) for phrase in SMALL_TALK_RESPONSES)
 
     def _generate_small_talk_response(self, query: str) -> str:
         import re
 
         q = query.strip().lower()
-        if re.search(r"\b(hi|hello|hey|greetings)\b", q):
-            return "Hello! Upload a PDF and ask me questions about agriculture. I can answer from the document."
-        if re.search(r"\b(how are you|how are you doing|how is it going|how is your day|how was your day)\b", q):
-            return "I'm doing well, thank you. I'm ready to help with agricultural questions from your PDF."
-        if re.search(r"\b(are you a bot|are you a machine|who are you|what are you|what can you do)\b", q):
-            return "Yes, I'm an agriculture assistant bot. Upload a PDF and ask me questions from the document."
-        if re.search(r"\b(ok|okay|oke)\b.*\b(begin|start)\b", q) or re.search(r"\b(let's begin|lets begin|let's start|lets start)\b", q):
-            return "Great! Upload a PDF and then ask me your agriculture questions. I'm ready to help."
-        if re.search(r"\b(thanks|thank you)\b", q):
-            return "You're welcome! Ask another agriculture question whenever you're ready."
-        if re.search(r"\b(bye|goodbye|see you)\b", q):
-            return "Goodbye! Bring another PDF when you want more agricultural answers."
+        normalized = re.sub(r"[^\w\s]", " ", q)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+
+        for phrase, response in SMALL_TALK_RESPONSES.items():
+            if re.search(r"\b" + re.escape(phrase) + r"\b", normalized):
+                return response
+
         return "I can help answer questions from your uploaded PDF. Please upload a document first."
 
     def _is_summary_request(self, query: str) -> bool:
