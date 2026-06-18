@@ -1,89 +1,132 @@
-# Agro QA Chatbot
-# AGRO QA Chatbot
+# AGRO — PDF-based RAG Q&A for Agriculture
 
-RAG-based Q&A system for farmers. Upload PDFs and ask natural-language questions.
+AGRO is a lightweight Retrieval-Augmented Generation (RAG) system designed for question-answering over agricultural PDF documents. Upload manuals, guides, or reports and ask natural-language questions; the backend retrieves relevant document chunks and synthesizes concise answers using a configurable LLM.
 
-This repository was restructured to use a modern stack:
+**Key features**
+- FastAPI backend with modular services in `src/`
+- React + Vite frontend in `frontend/`
+- Support for local models (Ollama) and cloud fallbacks (OpenAI)
+- Vector retrieval + chunking pipeline and persistent vector store
 
-- FastAPI backend (`src/api/app.py`)
-- Modular services in `src/services` and `src/core`
-- React + Vite frontend skeleton in `frontend/`
-- SQLite persistent conversation history (`database/`)
-- Docker and docker-compose for local development
+**Project structure (high level)**
+- `app.py` — development launcher
+- `requirements.txt` — Python dependencies
+- `src/` — backend code and services
+- `frontend/` — UI (React + Vite)
+- `data/` — uploaded documents and vector store
+- `docker/` — compose and Dockerfile for local deployment
+- `tests/` — unit tests
 
-## Features
-
-- PDF upload and chunking
-- TF-IDF retrieval-based context (vector store)
-- RAG-style pipeline with optional OpenAI support
-- FastAPI backend and React frontend
-- SQLite persistent conversation history
-- Docker + docker-compose for local dev
-
-## Quickstart
-
-1. Create a Python venv and activate it
+**Quickstart (development)**
+1. Clone the repo:
 
 ```bash
-python -m venv venv
-# Windows PowerShell
-venv\Scripts\Activate.ps1
-# or bash
-source venv/bin/activate
+git clone <repo-url> && cd AGRO
 ```
 
-2. Install Python dependencies
+2. Create and activate a virtual environment (Windows PowerShell shown):
 
-```bash
-pip install -r requirements.txt
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-3. Run backend
+On macOS / Linux:
 
 ```bash
-uvicorn src.api.app:app --reload --port 8000
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-4. Run frontend (from `frontend` folder)
+3. Install dependencies:
 
 ```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+4. Configure environment variables (copy `.env.example` → `.env` and edit). Important values:
+- `USE_LOCAL_MODEL`, `OLLAMA_URL`, `LOCAL_LLM_MODEL`, `OPENAI_API_KEY`
+
+5. Start backend (development):
+
+```bash
+python app.py
+# or
+python -m uvicorn src.api.app:app --reload
+```
+
+6. Start frontend:
+
+```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-5. Open frontend at `http://localhost:5173` and backend at `http://localhost:8000`
+7. Open the UI at the dev server URL printed by Vite (usually `http://localhost:5173`).
 
-## Project Layout
+**Evaluation metrics**
+AGRO tracks three metric groups useful for research and engineering trade-offs. Below are concise definitions and how they are calculated in the provided evaluation script.
 
-See the `src/`, `frontend/`, `database/`, and `docker/` folders for implementation.
+- **Retrieval Metrics**
+  - Precision@k: fraction of top-k retrieved chunks that are relevant; averaged across queries.
+  - Recall@k: fraction of the query's relevant chunks that appear in top-k; averaged across queries.
+  - Hit Rate@k: fraction of queries with at least one relevant item in top-k.
+  - MRR@k (Mean Reciprocal Rank): average reciprocal rank of the first relevant item in top-k.
 
-## Notes
+- **Answer Quality**
+  - Semantic Similarity: average semantic similarity between generated answer and reference (e.g., embedding cosine).
+  - Hallucination Rate: fraction of answers manually or automatically labeled as hallucinations.
 
-- The project currently uses TF-IDF and a local summarization fallback for free PDF Q&A.
-- A stronger local retrieval pipeline is now supported using SentenceTransformer embeddings and FAISS.
-- The PDF extractor now also tries OCR on embedded images when Tesseract and an image backend are available.
-- If you want higher-quality LLM responses, set `OPENAI_API_KEY` in a `.env` file and configure `OPENAI_MODEL` in `src/core/config.py`.
+- **System Performance**
+  - Avg Latency: average end-to-end response time (seconds).
+  - Avg Context Used: average number of document chunks used per query.
+  - RAG Efficiency: a simple proxy defined as Precision / Avg Latency (higher is better).
 
-## OCR Setup
+See `compute_and_plot_metrics.py` for concrete implementations and example data. The script computes the above metrics from per-query traces (relevances, similarities, latencies, etc.) and produces visual charts.
 
-To enable image OCR inside PDFs, install the following dependencies and a Tesseract runtime:
+**Evaluation charts**
+The repository includes an evaluation script that produces three charts illustrating the metric groups. Example outputs (generated by running the script) are embedded below.
+
+Retrieval Metrics:
+
+![Retrieval Metrics](images/evaluation_metrics/retrieval_metrics.png)
+
+Answer Quality Metrics:
+
+![Answer Quality Metrics](images/evaluation_metrics/answer_quality_metrics.png)
+
+System Performance Metrics:
+
+![System Performance Metrics](images/evaluation_metrics/system_performance_metrics.png)
+
+**How to reproduce the charts**
+1. Ensure your virtual environment is active and dependencies installed (see Quickstart).
+2. Run the metric script:
 
 ```bash
-pip install -r requirements.txt
+python compute_and_plot_metrics.py
 ```
 
-On Windows, install Tesseract OCR:
+3. Output images will be placed in `images/evaluation_metrics/`.
 
-1. Download the installer from https://github.com/tesseract-ocr/tesseract.
-2. Install it and add the Tesseract installation directory to your PATH.
+To use your own evaluation traces, modify the `relevances`, `total_relevants`, `similarities`, `halluc_flags`, `latencies`, and `context_counts` variables inside `compute_and_plot_metrics.py`, or refactor the script to load a CSV/JSON of per-query traces.
 
-If Tesseract is not on PATH, configure it in Python by setting:
+**Testing**
+- Run unit tests with `pytest`:
 
-```python
-import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+```bash
+python -m pytest -q
 ```
 
-The app will use OCR only when the required libraries are installed and the Tesseract binary is available.
+**Contributing**
+- Open issues for bugs and feature requests.
+- Send focused PRs against `main`; include tests for new functionality.
 
-# Agro-Crop-Q-A
+**License**
+- MIT (or change as appropriate)
+
+**Contact**
+- For help, open an issue in this repository.
+
