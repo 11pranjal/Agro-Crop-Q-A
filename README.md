@@ -2,7 +2,7 @@
 
 An advanced Retrieval-Augmented Generation (RAG) system designed for intelligent question-answering over agricultural PDF documents. Upload manuals, guides, research papers, and farming reports to build a searchable knowledge base, then ask natural-language questions. The system retrieves relevant document chunks and synthesizes accurate, context-aware answers using configurable LLMs.
 
-**Features • Architecture • Installation • Usage • API • Evaluation Metrics**
+**[Features](#features) • [Architecture](#architecture) • [Installation](#installation) • [Usage](#usage) • [API](#api-endpoints) • [Evaluation Metrics](#evaluation-metrics)**
 
 ## Features
 
