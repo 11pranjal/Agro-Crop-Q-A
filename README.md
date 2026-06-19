@@ -135,6 +135,7 @@ Key configuration variables:
 - `OLLAMA_URL` - Local Ollama endpoint (default: http://localhost:11434)
 - `LOCAL_LLM_MODEL` - Model name for Ollama (e.g., `llama2`, `neural-chat`)
 - `EMBEDDING_MODEL` - Embedding model (e.g., `nomic-embed-text`)
+- `EMBEDDING_DEVICE` - Device for local embeddings (`cuda` or `cpu`)
 - `OPENAI_API_KEY` - Your OpenAI API key (if using cloud models)
 - `OPENAI_MODEL` - OpenAI model name (e.g., `gpt-3.5-turbo`)
 

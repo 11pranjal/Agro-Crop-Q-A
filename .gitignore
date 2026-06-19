@@ -8,3 +8,14 @@
 # Python cache
 __pycache__/
 *.pyc
+
+# Ignore user-requested files/directories
+tests/
+compute_and_plot_metrics.py
+create_pdf_with_text.py
+create_test_pdf.py
+Tomato-disorders_1550759916-(1)-1701162522.pdf
+src/api/
+docker/
+database/
+data/

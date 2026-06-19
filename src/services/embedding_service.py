@@ -12,6 +12,7 @@ class EmbeddingService:
         self.api_key = settings.OPENAI_API_KEY
         self.openai_model = settings.OPENAI_EMBEDDING_MODEL
         self.local_model_name = settings.LOCAL_EMBEDDING_MODEL
+        self.embedding_device = settings.EMBEDDING_DEVICE
         self.local_model = None
 
     def get_embedding(self, text: str) -> Optional[np.ndarray]:
@@ -44,7 +45,17 @@ class EmbeddingService:
         try:
             if self.local_model is None:
                 from sentence_transformers import SentenceTransformer
-                self.local_model = SentenceTransformer(self.local_model_name)
+                device = self.embedding_device
+                if device == "cuda":
+                    try:
+                        import torch
+                        if not torch.cuda.is_available():
+                            print("CUDA not available; falling back to CPU for embeddings.")
+                            device = "cpu"
+                    except ImportError:
+                        print("PyTorch not installed; falling back to CPU for embeddings.")
+                        device = "cpu"
+                self.local_model = SentenceTransformer(self.local_model_name, device=device)
 
             embedding = self.local_model.encode(
                 text,

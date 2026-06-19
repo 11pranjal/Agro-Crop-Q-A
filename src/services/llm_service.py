@@ -135,8 +135,11 @@ class LLMService:
         if not self.ollama_url:
             return None
 
+        model_name = self.local_llm_model
+        if model_name.endswith(":latest"):
+            model_name = model_name
         body = {
-            "model": f"{self.local_llm_model}:latest",
+            "model": model_name,
             "prompt": prompt,
             "temperature": temperature,
             "num_predict": max_tokens,
