@@ -545,10 +545,6 @@ Contributions welcome! Please:
 - tailwindcss >= 3.0.0
 - radix-ui components
 
-## License
-
-This project is licensed under the MIT License — see LICENSE file for details.
-
 ## Acknowledgments
 
 - **Ollama** for providing local LLM inference
