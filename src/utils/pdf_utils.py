@@ -96,7 +96,7 @@ def _extract_image_text_from_pdf(pdf_bytes: bytes) -> str:
 
 def chunk_text(text: str, chunk_size: int = 800, overlap: int = 100) -> list[str]:
     """
-    Split text into sentence-based chunks
+    Split text into sentence-based chunks with configurable overlap.
 
     Args:
         text: Text to chunk
@@ -116,12 +116,27 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 100) -> list[str
         sentence = sentence.strip()
         if not sentence:
             continue
-        if len(current) + len(sentence) + 1 <= chunk_size:
-            current = (current + " " + sentence).strip() if current else sentence
+
+        candidate = (current + " " + sentence).strip() if current else sentence
+        if len(candidate) <= chunk_size:
+            current = candidate
+            continue
+
+        if current:
+            chunks.append(current)
+            if overlap > 0:
+                overlap_text = current[-overlap:]
+                current = (overlap_text + " " + sentence).strip()
+            else:
+                current = sentence
         else:
-            if current:
-                chunks.append(current)
-            current = sentence
+            # Sentence itself is longer than chunk_size, keep it as a single chunk.
+            chunks.append(sentence)
+            current = ""
+
+        if len(current) > chunk_size:
+            chunks.append(current)
+            current = ""
 
     if current:
         chunks.append(current)
